@@ -1,6 +1,6 @@
 {
   "name": "universal-lock",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "UniversalLock",
   "main": "dist/index.umd.js",
   "types": "dist/index.d.ts",
@@ -21,7 +21,6 @@
   },
   "keywords": [
     "UniversalLock",
-    "Snapshot",
     "Database",
     "nosql"
   ],

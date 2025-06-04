@@ -1,3 +1,8 @@
-import { test } from "./util";
+import { lockFactory, lockDecoratoryFactory } from "./lock";
+import { memoryBackendFactory } from "./backends/MemoryBackend";
 
-export default test;
+export {
+	memoryBackendFactory,
+	lockFactory,
+	lockDecoratoryFactory,
+}
