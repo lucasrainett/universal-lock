@@ -1,4 +1,4 @@
-import type { AsyncFunction } from "./types";
+import type { AsyncFunction } from "@universal-lock/types";
 
 export const generateId = () =>
 	Array.from({ length: 4 }, () =>

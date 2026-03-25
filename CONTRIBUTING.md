@@ -30,6 +30,7 @@ packages/
   memory/         → @universal-lock/memory
   web-locks/      → @universal-lock/web-locks
   local-storage/  → @universal-lock/local-storage
+  redis/          → @universal-lock/redis
 ```
 
 ## Contribution Flow

@@ -136,6 +136,20 @@ describe("memoryBackend", () => {
 		});
 	});
 
+	describe("concurrency", () => {
+		it("should reject one of two concurrent acquires on the same lock", async () => {
+			const backend = createBackend();
+			const results = await Promise.allSettled([
+				backend.acquire("lock-1", 1000, "owner-a"),
+				backend.acquire("lock-1", 1000, "owner-b"),
+			]);
+			const fulfilled = results.filter((r) => r.status === "fulfilled");
+			const rejected = results.filter((r) => r.status === "rejected");
+			expect(fulfilled).toHaveLength(1);
+			expect(rejected).toHaveLength(1);
+		});
+	});
+
 	describe("isolation", () => {
 		it("should have independent state per factory call", async () => {
 			const backend1 = createBackend();

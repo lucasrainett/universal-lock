@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Lock loss detection via `AbortSignal` on the release function (`release.signal`)
+- `onLockLost` callback — notifies when lock is lost due to renewal failure or running timeout
+- `onEvent` callback — lifecycle events: acquired, renewed, renewFailed, lockLost, released, acquireTimeout
+- `LockEvent` discriminated union type
+- Renewal error handling — renew failures now trigger lock loss notification and auto-release
+- Running timeout notification — `onLockLost` and `AbortSignal` fire before auto-release
+- `lockDecoratorFactory` passes `AbortSignal` as first argument to wrapped functions
+- `@universal-lock/redis` package — Redis backend for distributed cross-process/server locking via atomic Lua scripts
+- LocalStorage CAS verification — re-reads after write to detect concurrent overwrites
+- Integration tests combining core + memory backend
+- Concurrency tests for memory backend
 - Monorepo structure with pnpm workspaces
 - `@universal-lock/types` package for shared type definitions
 - `@universal-lock/memory` package (extracted from core)
@@ -36,6 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Memory backend validates ownership on renew and release
 - Stale lock check uses `<=` instead of `<`
 - All type imports use `import type` syntax
+- Removed "distributed" from library description — accurately describes as "universal locking library"
 
 ### Removed
 
