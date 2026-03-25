@@ -1,5 +1,4 @@
 import type {
-	AsyncFunction,
 	Lock,
 	Backend,
 	LockConfiguration,
@@ -126,10 +125,11 @@ export function lockFactory(
 }
 
 export function lockDecoratorFactory(lock: Lock) {
-	return <F extends AsyncFunction>(lockName: string, fn: F) => {
-		return async (
-			...args: Parameters<F>
-		): Promise<Awaited<ReturnType<F>>> => {
+	return <A extends unknown[], R>(
+		lockName: string,
+		fn: (signal: AbortSignal, ...args: A) => Promise<R>,
+	) => {
+		return async (...args: A): Promise<R> => {
 			const release = await lock.acquire(lockName);
 			let released = false;
 			const safeRelease = async () => {
@@ -138,9 +138,7 @@ export function lockDecoratorFactory(lock: Lock) {
 				await release();
 			};
 			try {
-				return (await fn(release.signal, ...args)) as Awaited<
-					ReturnType<F>
-				>;
+				return await fn(release.signal, ...args);
 			} finally {
 				await safeRelease();
 			}
