@@ -37,7 +37,7 @@ describe("memoryBackend", () => {
 			const backend = createBackend();
 			const stale = 50;
 			await backend.acquire("lock-1", stale, "owner-a");
-			await new Promise((resolve) => setTimeout(resolve, stale));
+			await new Promise((resolve) => setTimeout(resolve, stale + 10));
 			await expect(
 				backend.acquire("lock-1", stale, "owner-b"),
 			).resolves.toBeUndefined();
@@ -133,6 +133,20 @@ describe("memoryBackend", () => {
 			await expect(backend.release("lock-1", "owner-b")).rejects.toThrow(
 				"lock-1 not owned by caller",
 			);
+		});
+	});
+
+	describe("concurrency", () => {
+		it("should reject one of two concurrent acquires on the same lock", async () => {
+			const backend = createBackend();
+			const results = await Promise.allSettled([
+				backend.acquire("lock-1", 1000, "owner-a"),
+				backend.acquire("lock-1", 1000, "owner-b"),
+			]);
+			const fulfilled = results.filter((r) => r.status === "fulfilled");
+			const rejected = results.filter((r) => r.status === "rejected");
+			expect(fulfilled).toHaveLength(1);
+			expect(rejected).toHaveLength(1);
 		});
 	});
 

@@ -26,15 +26,27 @@ export type Backend = {
 
 export type BackendFactory = (...args: any[]) => Backend;
 
+export type LockEvent =
+	| { type: "acquired"; lockName: string }
+	| { type: "released"; lockName: string }
+	| { type: "renewed"; lockName: string }
+	| { type: "renewFailed"; lockName: string; error: unknown }
+	| { type: "lockLost"; lockName: string; reason: "renewFailed" | "timeout" }
+	| { type: "acquireTimeout"; lockName: string };
+
 export type LockConfiguration = {
-	acquireInterval: number; // retry acquiring lock every retryTimeout milliseconds
-	acquireFailTimeout: number; // fail if acquire lock takes longer than this
-	stale: number; // ignore locks that are older than this
-	renewInterval: number; // lock will renew every renewTimeout milliseconds
-	runningTimeout: number; // max time the handler can take to run the code or fail
+	acquireInterval: number;
+	acquireFailTimeout: number;
+	stale: number;
+	renewInterval: number;
+	runningTimeout: number;
+	onLockLost: (lockName: string, reason: "renewFailed" | "timeout") => void;
+	onEvent: (event: LockEvent) => void;
 };
 
-export type LockReleaseFunction = () => Promise<void>;
+export type LockReleaseFunction = (() => Promise<void>) & {
+	signal: AbortSignal;
+};
 export type LockAcquireFunction = (
 	lockName: string,
 ) => Promise<LockReleaseFunction>;

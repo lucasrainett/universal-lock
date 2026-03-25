@@ -18,6 +18,10 @@ local-storage:
   - changed-files:
       - any-glob-to-any-file: packages/local-storage/**
 
+redis:
+  - changed-files:
+      - any-glob-to-any-file: packages/redis/**
+
 documentation:
   - changed-files:
       - any-glob-to-any-file:

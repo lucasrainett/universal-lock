@@ -16,4 +16,5 @@ export type {
 	LockReleaseFunction,
 	TimestampLockEntry,
 	CallbackLockEntry,
+	LockEvent,
 } from "@universal-lock/types";

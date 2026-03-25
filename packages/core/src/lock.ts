@@ -1,5 +1,4 @@
 import type {
-	AsyncFunction,
 	Lock,
 	Backend,
 	LockConfiguration,
@@ -7,12 +6,16 @@ import type {
 } from "@universal-lock/types";
 import { asyncInterval, generateId } from "./util";
 
+const noop = () => {};
+
 const defaultConfiguration: LockConfiguration = {
 	acquireInterval: 250,
 	acquireFailTimeout: 5000,
 	stale: 1000,
 	renewInterval: 250,
 	runningTimeout: 2000,
+	onLockLost: noop,
+	onEvent: noop,
 };
 
 export function lockFactory(
@@ -25,7 +28,9 @@ export function lockFactory(
 		stale,
 		renewInterval,
 		runningTimeout,
-	} = { ...defaultConfiguration, ...configuration };
+		onLockLost,
+		onEvent,
+	}: LockConfiguration = { ...defaultConfiguration, ...configuration };
 	const setupPromise = setup();
 
 	return {
@@ -33,8 +38,11 @@ export function lockFactory(
 			await setupPromise;
 			return new Promise<LockReleaseFunction>((resolve, reject) => {
 				const lockId = generateId();
+				const abortController = new AbortController();
+
 				const acquireTimeout = setTimeout(async () => {
 					await stopAcquireInterval();
+					onEvent({ type: "acquireTimeout", lockName });
 					reject(
 						new Error(
 							`Failed to acquire lock "${lockName}" within ${acquireFailTimeout}ms`,
@@ -52,27 +60,64 @@ export function lockFactory(
 					clearTimeout(acquireTimeout);
 					stopAcquireInterval();
 
-					const stopRenewInterval = asyncInterval(async () => {
-						await renew(lockName, lockId);
-					}, renewInterval);
-
 					let runningTimer: ReturnType<typeof setTimeout> | null =
 						null;
 					let released = false;
 
-					const releaseLock = async () => {
+					const doRelease = async () => {
 						if (released) return;
 						released = true;
 						if (runningTimer) clearTimeout(runningTimer);
-						await stopRenewInterval();
 						await release(lockName, lockId);
+						onEvent({ type: "released", lockName });
 					};
 
+					const releaseLock = async () => {
+						if (released) return;
+						await stopRenewInterval();
+						await doRelease();
+					};
+
+					const stopRenewInterval = asyncInterval(async () => {
+						try {
+							await renew(lockName, lockId);
+							onEvent({ type: "renewed", lockName });
+						} catch (error) {
+							onEvent({
+								type: "renewFailed",
+								lockName,
+								error,
+							});
+							onEvent({
+								type: "lockLost",
+								lockName,
+								reason: "renewFailed",
+							});
+							onLockLost(lockName, "renewFailed");
+							abortController.abort();
+							// Don't await stopRenewInterval here — we're inside it
+							stopRenewInterval();
+							await doRelease();
+						}
+					}, renewInterval);
+
 					runningTimer = setTimeout(async () => {
+						onEvent({
+							type: "lockLost",
+							lockName,
+							reason: "timeout",
+						});
+						onLockLost(lockName, "timeout");
+						abortController.abort();
 						await releaseLock();
 					}, runningTimeout);
 
-					resolve(releaseLock);
+					onEvent({ type: "acquired", lockName });
+
+					const releaseFn = Object.assign(releaseLock, {
+						signal: abortController.signal,
+					}) as LockReleaseFunction;
+					resolve(releaseFn);
 				}, acquireInterval);
 			});
 		},
@@ -80,10 +125,11 @@ export function lockFactory(
 }
 
 export function lockDecoratorFactory(lock: Lock) {
-	return <F extends AsyncFunction>(lockName: string, fn: F) => {
-		return async (
-			...args: Parameters<F>
-		): Promise<Awaited<ReturnType<F>>> => {
+	return <A extends unknown[], R>(
+		lockName: string,
+		fn: (signal: AbortSignal, ...args: A) => Promise<R>,
+	) => {
+		return async (...args: A): Promise<R> => {
 			const release = await lock.acquire(lockName);
 			let released = false;
 			const safeRelease = async () => {
@@ -92,7 +138,7 @@ export function lockDecoratorFactory(lock: Lock) {
 				await release();
 			};
 			try {
-				return (await fn(...args)) as Awaited<ReturnType<F>>;
+				return await fn(release.signal, ...args);
 			} finally {
 				await safeRelease();
 			}

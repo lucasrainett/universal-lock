@@ -97,6 +97,25 @@ describe("localStorageBackend", () => {
 			).rejects.toThrow("lock-1 already locked");
 		});
 
+		it("should detect concurrent write via CAS verification", async () => {
+			const mock = createMockLocalStorage();
+			const originalSetItem = mock.setItem;
+			mock.setItem = vi.fn((key: string, value: string) => {
+				originalSetItem(key, value);
+				// Simulate another tab overwriting between write and re-read
+				mock._store[key] = JSON.stringify({
+					lockId: "other-tab",
+					timestamp: Date.now(),
+				});
+			});
+			vi.stubGlobal("localStorage", mock);
+
+			const backend = createBackend();
+			await expect(
+				backend.acquire("lock-1", 1000, "owner-a"),
+			).rejects.toThrow("lock-1 already locked");
+		});
+
 		it("should allow re-acquiring after release", async () => {
 			const backend = createBackend();
 			await backend.acquire("lock-1", 1000, "owner-a");

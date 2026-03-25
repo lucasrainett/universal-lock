@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, type Mock } from "vitest";
 import { lockFactory, lockDecoratorFactory } from "./lock";
-import type { Backend } from "./types";
+import type { Backend } from "@universal-lock/types";
 
 const createMockBackend = (overrides: Partial<Backend> = {}): Backend => ({
 	setup: vi.fn().mockResolvedValue(undefined),
@@ -163,6 +163,134 @@ describe("lockFactory", () => {
 		expect(lockId1).not.toBe(lockId2);
 	});
 
+	it("should provide an AbortSignal on the release function", async () => {
+		const backend = createMockBackend();
+		const lock = lockFactory(backend, shortConfig);
+
+		const release = await lock.acquire("test-lock");
+		expect(release.signal).toBeInstanceOf(AbortSignal);
+		expect(release.signal.aborted).toBe(false);
+		await release();
+	});
+
+	it("should call onLockLost when renew fails", async () => {
+		let renewCount = 0;
+		const onLockLost = vi.fn();
+		const backend = createMockBackend({
+			renew: vi.fn().mockImplementation(async () => {
+				renewCount++;
+				if (renewCount >= 2) throw new Error("renew failed");
+			}),
+		});
+		const lock = lockFactory(backend, {
+			...shortConfig,
+			onLockLost,
+		});
+
+		await lock.acquire("test-lock");
+		await new Promise((resolve) => setTimeout(resolve, 50));
+
+		expect(onLockLost).toHaveBeenCalledWith("test-lock", "renewFailed");
+	});
+
+	it("should abort signal when renew fails", async () => {
+		let renewCount = 0;
+		const backend = createMockBackend({
+			renew: vi.fn().mockImplementation(async () => {
+				renewCount++;
+				if (renewCount >= 2) throw new Error("renew failed");
+			}),
+		});
+		const lock = lockFactory(backend, shortConfig);
+
+		const release = await lock.acquire("test-lock");
+		await new Promise((resolve) => setTimeout(resolve, 50));
+
+		expect(release.signal.aborted).toBe(true);
+	});
+
+	it("should auto-release when renew fails", async () => {
+		let renewCount = 0;
+		const backend = createMockBackend({
+			renew: vi.fn().mockImplementation(async () => {
+				renewCount++;
+				if (renewCount >= 2) throw new Error("renew failed");
+			}),
+		});
+		const lock = lockFactory(backend, shortConfig);
+
+		await lock.acquire("test-lock");
+		await new Promise((resolve) => setTimeout(resolve, 50));
+
+		expect(backend.release).toHaveBeenCalledWith(
+			"test-lock",
+			expect.any(String),
+		);
+	});
+
+	it("should call onLockLost when runningTimeout fires", async () => {
+		const onLockLost = vi.fn();
+		const backend = createMockBackend();
+		const lock = lockFactory(backend, {
+			...shortConfig,
+			runningTimeout: 30,
+			onLockLost,
+		});
+
+		await lock.acquire("test-lock");
+		await new Promise((resolve) => setTimeout(resolve, 60));
+
+		expect(onLockLost).toHaveBeenCalledWith("test-lock", "timeout");
+	});
+
+	it("should abort signal when runningTimeout fires", async () => {
+		const backend = createMockBackend();
+		const lock = lockFactory(backend, {
+			...shortConfig,
+			runningTimeout: 30,
+		});
+
+		const release = await lock.acquire("test-lock");
+		await new Promise((resolve) => setTimeout(resolve, 60));
+
+		expect(release.signal.aborted).toBe(true);
+	});
+
+	it("should emit lifecycle events via onEvent", async () => {
+		const events: string[] = [];
+		const onEvent = vi.fn((e: { type: string }) => events.push(e.type));
+		const backend = createMockBackend();
+		const lock = lockFactory(backend, {
+			...shortConfig,
+			onEvent,
+		});
+
+		const release = await lock.acquire("test-lock");
+		await new Promise((resolve) => setTimeout(resolve, 15));
+		await release();
+
+		expect(events[0]).toBe("acquired");
+		expect(events).toContain("renewed");
+		expect(events[events.length - 1]).toBe("released");
+	});
+
+	it("should emit acquireTimeout event", async () => {
+		const onEvent = vi.fn();
+		const backend = createMockBackend({
+			acquire: vi.fn().mockRejectedValue(new Error("locked")),
+		});
+		const lock = lockFactory(backend, {
+			...shortConfig,
+			acquireFailTimeout: 50,
+			onEvent,
+		});
+
+		await lock.acquire("test-lock").catch(() => {});
+		expect(onEvent).toHaveBeenCalledWith(
+			expect.objectContaining({ type: "acquireTimeout" }),
+		);
+	});
+
 	it("should await setup before acquiring", async () => {
 		const order: string[] = [];
 		const backend = createMockBackend({
@@ -222,6 +350,44 @@ describe("lockDecoratorFactory", () => {
 		await fn();
 		await new Promise((resolve) => setTimeout(resolve, 20));
 		expect(backend.release).toHaveBeenCalledTimes(1);
+	});
+
+	it("should pass AbortSignal as first argument to wrapped function", async () => {
+		const backend = createMockBackend();
+		const lock = lockFactory(backend, shortConfig);
+		const withLock = lockDecoratorFactory(lock);
+
+		let receivedSignal: AbortSignal | undefined;
+		const fn = withLock("test-lock", async (signal: AbortSignal) => {
+			receivedSignal = signal;
+			return "done";
+		});
+
+		await fn();
+		expect(receivedSignal).toBeInstanceOf(AbortSignal);
+		expect(receivedSignal!.aborted).toBe(false);
+	});
+
+	it("should abort signal passed to wrapped function on lock loss", async () => {
+		let renewCount = 0;
+		const backend = createMockBackend({
+			renew: vi.fn().mockImplementation(async () => {
+				renewCount++;
+				if (renewCount >= 2) throw new Error("renew failed");
+			}),
+		});
+		const lock = lockFactory(backend, shortConfig);
+		const withLock = lockDecoratorFactory(lock);
+
+		let signalAborted = false;
+		const fn = withLock("test-lock", async (signal: AbortSignal) => {
+			await new Promise((resolve) => setTimeout(resolve, 80));
+			signalAborted = signal.aborted;
+			return "done";
+		});
+
+		await fn();
+		expect(signalAborted).toBe(true);
 	});
 
 	it("should release lock even if function throws", async () => {
