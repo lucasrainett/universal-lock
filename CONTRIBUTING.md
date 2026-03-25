@@ -12,7 +12,7 @@ Thank you for your interest in contributing to universal-lock!
 
 ## Development
 
-This is a monorepo managed with pnpm workspaces and [Changesets](https://github.com/changesets/changesets) for versioning and publishing.
+This is a monorepo managed with pnpm workspaces.
 
 ```bash
 pnpm test       # Run tests with coverage
@@ -50,25 +50,7 @@ git checkout -b feat/my-feature
 - Add or update tests for any new or changed functionality
 - Run `pnpm test` and `pnpm lint` to verify everything passes
 
-### 3. Add a changeset
-
-If your changes affect any published package, run:
-
-```bash
-pnpm changeset
-```
-
-This will prompt you to:
-
-1. Select which packages are affected
-2. Choose the semver bump type (patch / minor / major)
-3. Write a summary of the change
-
-This creates a markdown file in `.changeset/` that describes the change. Commit it along with your code.
-
-Skip this step for changes that don't affect published packages (e.g., CI config, docs-only changes, test-only changes).
-
-### 4. Open a Pull Request
+### 3. Open a Pull Request
 
 Push your branch and open a PR targeting `master`:
 
@@ -76,20 +58,23 @@ Push your branch and open a PR targeting `master`:
 git push origin feat/my-feature
 ```
 
-CI will automatically run lint, tests, and build across multiple Node.js versions. All checks must pass before merging.
+CI will automatically run lint, tests, and build across Node.js 20 and 22. All checks must pass before merging.
 
-### 5. Review and merge
+### 4. Review and merge
 
 Once approved and CI passes, a maintainer will merge your PR into `master`.
 
-### 6. Release (maintainers only)
+### 5. Automatic release
 
-After merging PRs that include changesets, the Release workflow automatically:
+After merge, the release workflow automatically:
 
-1. Opens a **"Version Packages"** PR that bumps versions and updates changelogs for only the packages that changed
-2. When that PR is merged, publishes the updated packages to npm
+1. Detects which packages have source changes since their last published version
+2. Bumps the patch version for changed packages
+3. Publishes to npm
+4. Creates git tags (e.g., `@universal-lock/memory@0.0.3`)
+5. Commits the version bumps back to `master`
 
-Contributors do not need to bump versions or publish manually.
+No manual versioning, changelogs, or publish steps are needed.
 
 ## Adding a Backend
 
