@@ -1,11 +1,12 @@
+import { describe, it, expect, vi, type Mock } from "vitest";
 import { lockFactory, lockDecoratorFactory } from "./lock";
 import { Backend } from "./types";
 
 const createMockBackend = (overrides: Partial<Backend> = {}): Backend => ({
-	setup: jest.fn().mockResolvedValue(undefined),
-	acquire: jest.fn().mockResolvedValue(undefined),
-	renew: jest.fn().mockResolvedValue(undefined),
-	release: jest.fn().mockResolvedValue(undefined),
+	setup: vi.fn().mockResolvedValue(undefined),
+	acquire: vi.fn().mockResolvedValue(undefined),
+	renew: vi.fn().mockResolvedValue(undefined),
+	release: vi.fn().mockResolvedValue(undefined),
 	...overrides,
 });
 
@@ -29,16 +30,23 @@ describe("lockFactory", () => {
 		const lock = lockFactory(backend, shortConfig);
 
 		const release = await lock.acquire("test-lock");
-		expect(backend.acquire).toHaveBeenCalledWith("test-lock", shortConfig.stale, expect.any(String));
+		expect(backend.acquire).toHaveBeenCalledWith(
+			"test-lock",
+			shortConfig.stale,
+			expect.any(String),
+		);
 
 		await release();
-		expect(backend.release).toHaveBeenCalledWith("test-lock", expect.any(String));
+		expect(backend.release).toHaveBeenCalledWith(
+			"test-lock",
+			expect.any(String),
+		);
 	});
 
 	it("should retry acquiring when acquire fails", async () => {
 		let attempts = 0;
 		const backend = createMockBackend({
-			acquire: jest.fn().mockImplementation(async () => {
+			acquire: vi.fn().mockImplementation(async () => {
 				attempts++;
 				if (attempts < 3) throw new Error("locked");
 			}),
@@ -52,7 +60,7 @@ describe("lockFactory", () => {
 
 	it("should reject when acquire timeout is exceeded", async () => {
 		const backend = createMockBackend({
-			acquire: jest.fn().mockRejectedValue(new Error("locked")),
+			acquire: vi.fn().mockRejectedValue(new Error("locked")),
 		});
 		const lock = lockFactory(backend, {
 			...shortConfig,
@@ -73,7 +81,10 @@ describe("lockFactory", () => {
 		await release();
 
 		expect(backend.renew).toHaveBeenCalled();
-		expect(backend.renew).toHaveBeenCalledWith("test-lock", expect.any(String));
+		expect(backend.renew).toHaveBeenCalledWith(
+			"test-lock",
+			expect.any(String),
+		);
 	});
 
 	it("should stop renewing after release", async () => {
@@ -83,9 +94,11 @@ describe("lockFactory", () => {
 		const release = await lock.acquire("test-lock");
 		await release();
 
-		const renewCountAtRelease = (backend.renew as jest.Mock).mock.calls.length;
+		const renewCountAtRelease = (backend.renew as Mock).mock.calls.length;
 		await new Promise((resolve) => setTimeout(resolve, 50));
-		expect((backend.renew as jest.Mock).mock.calls.length).toBe(renewCountAtRelease);
+		expect((backend.renew as Mock).mock.calls.length).toBe(
+			renewCountAtRelease,
+		);
 	});
 
 	it("should auto-release after runningTimeout", async () => {
@@ -98,7 +111,10 @@ describe("lockFactory", () => {
 		await lock.acquire("test-lock");
 		await new Promise((resolve) => setTimeout(resolve, 80));
 
-		expect(backend.release).toHaveBeenCalledWith("test-lock", expect.any(String));
+		expect(backend.release).toHaveBeenCalledWith(
+			"test-lock",
+			expect.any(String),
+		);
 	});
 
 	it("should not auto-release if manually released before timeout", async () => {
@@ -124,9 +140,9 @@ describe("lockFactory", () => {
 		await new Promise((resolve) => setTimeout(resolve, 15));
 		await release();
 
-		const acquireValue = (backend.acquire as jest.Mock).mock.calls[0][2];
-		const renewValue = (backend.renew as jest.Mock).mock.calls[0][1];
-		const releaseValue = (backend.release as jest.Mock).mock.calls[0][1];
+		const acquireValue = (backend.acquire as Mock).mock.calls[0][2];
+		const renewValue = (backend.renew as Mock).mock.calls[0][1];
+		const releaseValue = (backend.release as Mock).mock.calls[0][1];
 
 		expect(acquireValue).toBe(renewValue);
 		expect(acquireValue).toBe(releaseValue);
@@ -141,8 +157,8 @@ describe("lockFactory", () => {
 		const release2 = await lock.acquire("lock-2");
 		await release2();
 
-		const value1 = (backend.acquire as jest.Mock).mock.calls[0][2];
-		const value2 = (backend.acquire as jest.Mock).mock.calls[1][2];
+		const value1 = (backend.acquire as Mock).mock.calls[0][2];
+		const value2 = (backend.acquire as Mock).mock.calls[1][2];
 
 		expect(value1).not.toBe(value2);
 	});
@@ -150,11 +166,11 @@ describe("lockFactory", () => {
 	it("should await setup before acquiring", async () => {
 		const order: string[] = [];
 		const backend = createMockBackend({
-			setup: jest.fn().mockImplementation(async () => {
+			setup: vi.fn().mockImplementation(async () => {
 				await new Promise((resolve) => setTimeout(resolve, 30));
 				order.push("setup");
 			}),
-			acquire: jest.fn().mockImplementation(async () => {
+			acquire: vi.fn().mockImplementation(async () => {
 				order.push("acquire");
 			}),
 		});
@@ -170,10 +186,10 @@ describe("lockDecoratorFactory", () => {
 	it("should acquire and release lock around function execution", async () => {
 		const order: string[] = [];
 		const backend = createMockBackend({
-			acquire: jest.fn().mockImplementation(async () => {
+			acquire: vi.fn().mockImplementation(async () => {
 				order.push("acquire");
 			}),
-			release: jest.fn().mockImplementation(async () => {
+			release: vi.fn().mockImplementation(async () => {
 				order.push("release");
 			}),
 		});
@@ -218,6 +234,9 @@ describe("lockDecoratorFactory", () => {
 		});
 
 		await expect(fn()).rejects.toThrow("boom");
-		expect(backend.release).toHaveBeenCalledWith("test-lock", expect.any(String));
+		expect(backend.release).toHaveBeenCalledWith(
+			"test-lock",
+			expect.any(String),
+		);
 	});
 });

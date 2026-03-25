@@ -4,7 +4,7 @@ import {
 	BackendFactory,
 	BackendReleaseFunction,
 	BackendRenewFunction,
-	BackendSetupFunction
+	BackendSetupFunction,
 } from "../types";
 
 type LockEntry = { value: string; timestamp: number };
@@ -28,14 +28,16 @@ export const memoryBackendFactory: BackendFactory = (): Backend => {
 	const renew: BackendRenewFunction = async (lockName, value) => {
 		const existing = locks[lockName];
 		if (!existing) throw new Error(`${lockName} not locked`);
-		if (existing.value !== value) throw new Error(`${lockName} not owned by caller`);
+		if (existing.value !== value)
+			throw new Error(`${lockName} not owned by caller`);
 		existing.timestamp = Date.now();
 	};
 
 	const release: BackendReleaseFunction = async (lockName, value) => {
 		const existing = locks[lockName];
 		if (!existing) throw new Error(`${lockName} not locked`);
-		if (existing.value !== value) throw new Error(`${lockName} not owned by caller`);
+		if (existing.value !== value)
+			throw new Error(`${lockName} not owned by caller`);
 		delete locks[lockName];
 	};
 

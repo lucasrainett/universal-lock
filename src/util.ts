@@ -1,7 +1,10 @@
 import { AsyncFunction } from "./types";
 
-export const generateId = () => Array.from({ length: 4 }, () =>
-		Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, "0"),
+export const generateId = () =>
+	Array.from({ length: 4 }, () =>
+		Math.floor(Math.random() * 0x100000000)
+			.toString(16)
+			.padStart(8, "0"),
 	).join("");
 
 export const sleep = async (ms: number) =>

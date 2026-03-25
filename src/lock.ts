@@ -1,4 +1,10 @@
-import { AsyncFunction, Lock, Backend, LockConfiguration, LockReleaseFunction } from "./types";
+import {
+	AsyncFunction,
+	Lock,
+	Backend,
+	LockConfiguration,
+	LockReleaseFunction,
+} from "./types";
 import { asyncInterval, generateId } from "./util";
 
 const defaultConfiguration: LockConfiguration = {
@@ -10,7 +16,7 @@ const defaultConfiguration: LockConfiguration = {
 };
 
 export function lockFactory(
-	{setup, acquire, renew, release}: Backend,
+	{ setup, acquire, renew, release }: Backend,
 	configuration: Partial<LockConfiguration> = {},
 ): Lock {
 	const {
@@ -29,7 +35,11 @@ export function lockFactory(
 				const lockId = generateId();
 				const acquireTimeout = setTimeout(async () => {
 					await stopAcquireInterval();
-					reject(new Error(`Failed to acquire lock "${lockName}" within ${acquireFailTimeout}ms`));
+					reject(
+						new Error(
+							`Failed to acquire lock "${lockName}" within ${acquireFailTimeout}ms`,
+						),
+					);
 				}, acquireFailTimeout);
 
 				const stopAcquireInterval = asyncInterval(async () => {
@@ -46,7 +56,8 @@ export function lockFactory(
 						await renew(lockName, lockId);
 					}, renewInterval);
 
-					let runningTimer: ReturnType<typeof setTimeout> | null = null;
+					let runningTimer: ReturnType<typeof setTimeout> | null =
+						null;
 					let released = false;
 
 					const releaseLock = async () => {
@@ -70,7 +81,9 @@ export function lockFactory(
 
 export function lockDecoratorFactory(lock: Lock) {
 	return <F extends AsyncFunction>(lockName: string, fn: F) => {
-		return async (...args: Parameters<F>): Promise<Awaited<ReturnType<F>>> => {
+		return async (
+			...args: Parameters<F>
+		): Promise<Awaited<ReturnType<F>>> => {
 			const release = await lock.acquire(lockName);
 			let released = false;
 			const safeRelease = async () => {
@@ -79,7 +92,7 @@ export function lockDecoratorFactory(lock: Lock) {
 				await release();
 			};
 			try {
-				return await fn(...args);
+				return (await fn(...args)) as Awaited<ReturnType<F>>;
 			} finally {
 				await safeRelease();
 			}

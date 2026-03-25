@@ -1,11 +1,21 @@
-export type AsyncFunction<R extends any = any, P extends any[] = any[]> = (
+export type AsyncFunction<R = unknown, P extends unknown[] = unknown[]> = (
 	...args: P
 ) => Promise<R>;
 
 export type BackendSetupFunction = () => Promise<void>;
-export type BackendAcquireFunction = (lockName: string, stale: number, value: string) => Promise<void>;
-export type BackendRenewFunction = (lockName: string, value: string) => Promise<void>;
-export type BackendReleaseFunction = (lockName: string, value: string) => Promise<void>;
+export type BackendAcquireFunction = (
+	lockName: string,
+	stale: number,
+	value: string,
+) => Promise<void>;
+export type BackendRenewFunction = (
+	lockName: string,
+	value: string,
+) => Promise<void>;
+export type BackendReleaseFunction = (
+	lockName: string,
+	value: string,
+) => Promise<void>;
 
 export type Backend = {
 	setup: BackendSetupFunction;
@@ -24,9 +34,9 @@ export type LockConfiguration = {
 	runningTimeout: number; // max time the handler can take to run the code or fail
 };
 
-
 export type LockReleaseFunction = () => Promise<void>;
-export type LockAcquireFunction = (lockName: string) => Promise<LockReleaseFunction>;
+export type LockAcquireFunction = (
+	lockName: string,
+) => Promise<LockReleaseFunction>;
 
-export type Lock = {acquire: LockAcquireFunction};
-
+export type Lock = { acquire: LockAcquireFunction };

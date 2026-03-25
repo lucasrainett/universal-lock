@@ -1,3 +1,4 @@
+import { describe, it, expect } from "vitest";
 import { asyncInterval, generateId, sleep } from "./util";
 
 describe("util", () => {
@@ -8,7 +9,9 @@ describe("util", () => {
 		});
 
 		it("should generate unique values", () => {
-			const ids = new Set(Array.from({ length: 100 }, () => generateId()));
+			const ids = new Set(
+				Array.from({ length: 100 }, () => generateId()),
+			);
 			expect(ids.size).toBe(100);
 		});
 	});
