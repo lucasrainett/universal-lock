@@ -4,7 +4,7 @@
   "description": "Lightweight, isomorphic distributed locking library with pluggable backends",
   "sideEffects": false,
   "engines": {
-    "node": ">=16"
+    "node": ">=20"
   },
   "main": "dist/index.js",
   "module": "dist/index.mjs",
