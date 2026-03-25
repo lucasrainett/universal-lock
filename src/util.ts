@@ -1,5 +1,9 @@
 import { AsyncFunction } from "./types";
 
+export const generateId = () => Array.from({ length: 4 }, () =>
+		Math.floor(Math.random() * 0x100000000).toString(16).padStart(8, "0"),
+	).join("");
+
 export const sleep = async (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -8,7 +12,7 @@ export const asyncInterval = <H extends AsyncFunction<void, []>>(
 	timeout: number,
 ) => {
 	let running = true;
-	(async () => {
+	const loop = (async () => {
 		while (running) {
 			await handler();
 			if (!running) break;
@@ -17,5 +21,6 @@ export const asyncInterval = <H extends AsyncFunction<void, []>>(
 	})();
 	return async () => {
 		running = false;
+		await loop;
 	};
 };

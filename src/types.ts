@@ -3,9 +3,9 @@ export type AsyncFunction<R extends any = any, P extends any[] = any[]> = (
 ) => Promise<R>;
 
 export type BackendSetupFunction = () => Promise<void>;
-export type BackendAcquireFunction = (lockName: string, stale: number) => Promise<void>;
-export type BackendRenewFunction = (lockName: string) => Promise<void>;
-export type BackendReleaseFunction = (lockName: string) => Promise<void>;
+export type BackendAcquireFunction = (lockName: string, stale: number, value: string) => Promise<void>;
+export type BackendRenewFunction = (lockName: string, value: string) => Promise<void>;
+export type BackendReleaseFunction = (lockName: string, value: string) => Promise<void>;
 
 export type Backend = {
 	setup: BackendSetupFunction;

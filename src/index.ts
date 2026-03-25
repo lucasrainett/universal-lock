@@ -1,8 +1,8 @@
-import { lockFactory, lockDecoratoryFactory } from "./lock";
+import { lockFactory, lockDecoratorFactory } from "./lock";
 import { memoryBackendFactory } from "./backends/MemoryBackend";
 
 export {
 	memoryBackendFactory,
 	lockFactory,
-	lockDecoratoryFactory,
+	lockDecoratorFactory,
 }
