@@ -1,6 +1,32 @@
 import { describe, it, expect } from "vitest";
 import { lockFactory, lockDecoratorFactory } from "./lock";
-import { createBackend } from "@universal-lock/memory";
+import type { Backend } from "@universal-lock/types";
+
+const createSimpleBackend = (): Backend => {
+	const locks = new Map<string, { lockId: string; timestamp: number }>();
+	return {
+		setup: async () => {},
+		acquire: async (lockName, stale, lockId) => {
+			const existing = locks.get(lockName);
+			if (existing && existing.timestamp + stale > Date.now()) {
+				throw new Error(`${lockName} already locked`);
+			}
+			locks.set(lockName, { lockId, timestamp: Date.now() });
+		},
+		renew: async (lockName, lockId) => {
+			const existing = locks.get(lockName);
+			if (!existing || existing.lockId !== lockId)
+				throw new Error(`${lockName} not locked`);
+			existing.timestamp = Date.now();
+		},
+		release: async (lockName, lockId) => {
+			const existing = locks.get(lockName);
+			if (!existing || existing.lockId !== lockId)
+				throw new Error(`${lockName} not locked`);
+			locks.delete(lockName);
+		},
+	};
+};
 
 describe("index", () => {
 	it("should export lockFactory", () => {
@@ -21,8 +47,8 @@ describe("integration", () => {
 		runningTimeout: 200,
 	};
 
-	it("should acquire and release with memory backend", async () => {
-		const lock = lockFactory(createBackend(), shortConfig);
+	it("should acquire and release", async () => {
+		const lock = lockFactory(createSimpleBackend(), shortConfig);
 		const release = await lock.acquire("test-lock");
 		expect(release).toBeTypeOf("function");
 		expect(release.signal).toBeInstanceOf(AbortSignal);
@@ -30,7 +56,7 @@ describe("integration", () => {
 	});
 
 	it("should serialize concurrent acquires on the same lock", async () => {
-		const lock = lockFactory(createBackend(), shortConfig);
+		const lock = lockFactory(createSimpleBackend(), shortConfig);
 		const order: string[] = [];
 
 		const task1 = lock.acquire("shared").then(async (release) => {
@@ -57,7 +83,7 @@ describe("integration", () => {
 	});
 
 	it("should work end-to-end with lockDecoratorFactory", async () => {
-		const lock = lockFactory(createBackend(), shortConfig);
+		const lock = lockFactory(createSimpleBackend(), shortConfig);
 		const withLock = lockDecoratorFactory(lock);
 
 		const fn = withLock(

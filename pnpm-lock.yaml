@@ -47,10 +47,6 @@ importers:
       '@universal-lock/types':
         specifier: workspace:*
         version: link:../types
-    devDependencies:
-      '@universal-lock/memory':
-        specifier: workspace:*
-        version: link:../memory
 
   packages/local-storage:
     dependencies:

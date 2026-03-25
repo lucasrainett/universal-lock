@@ -40,8 +40,8 @@ export type LockConfiguration = {
 	stale: number;
 	renewInterval: number;
 	runningTimeout: number;
-	onLockLost?: (lockName: string, reason: "renewFailed" | "timeout") => void;
-	onEvent?: (event: LockEvent) => void;
+	onLockLost: (lockName: string, reason: "renewFailed" | "timeout") => void;
+	onEvent: (event: LockEvent) => void;
 };
 
 export type LockReleaseFunction = (() => Promise<void>) & {
