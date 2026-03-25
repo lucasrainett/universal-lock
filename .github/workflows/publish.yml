@@ -4,17 +4,22 @@ on:
   push:
     branches: [master]
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -27,15 +32,90 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
-      - name: Create Release PR or Publish
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          title: "chore: version packages"
-          commit: "chore: version packages"
-          publish: pnpm release
-          createGithubReleases: true
+      - name: Detect changed packages and publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          PUBLISHED=""
+
+          for pkg_dir in packages/*/; do
+            pkg_json="${pkg_dir}package.json"
+            [ -f "$pkg_json" ] || continue
+
+            PKG_NAME=$(node -e "console.log(require('./$pkg_json').name)")
+            PKG_VERSION=$(node -e "console.log(require('./$pkg_json').version)")
+            TAG="${PKG_NAME}@${PKG_VERSION}"
+
+            # Check if this version is already tagged (already published)
+            if git rev-parse "$TAG" >/dev/null 2>&1; then
+              # Tag exists — check if source changed since that tag
+              CHANGED=$(git diff --name-only "$TAG"...HEAD -- "${pkg_dir}src/")
+              if [ -z "$CHANGED" ]; then
+                echo "⏭  $PKG_NAME — no source changes since $TAG"
+                continue
+              fi
+
+              echo "📦 $PKG_NAME — source changed since $TAG, bumping patch..."
+
+              # Bump patch version
+              cd "$pkg_dir"
+              NEW_VERSION=$(node -e "
+                const [major, minor, patch] = '$PKG_VERSION'.split('.').map(Number);
+                console.log(major + '.' + minor + '.' + (patch + 1));
+              ")
+              node -e "
+                const fs = require('fs');
+                const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+                pkg.version = '$NEW_VERSION';
+                fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+              "
+              cd - > /dev/null
+            else
+              echo "📦 $PKG_NAME — no tag found, publishing $PKG_VERSION..."
+              NEW_VERSION="$PKG_VERSION"
+            fi
+
+            # Publish
+            cd "$pkg_dir"
+            if pnpm publish --provenance --access public --no-git-checks 2>&1; then
+              PUBLISHED="$PUBLISHED $PKG_NAME@$NEW_VERSION"
+              echo "✅ Published $PKG_NAME@$NEW_VERSION"
+            else
+              echo "❌ Failed to publish $PKG_NAME"
+            fi
+            cd - > /dev/null
+          done
+
+          # Commit version bumps and tag
+          if [ -n "$PUBLISHED" ]; then
+            git add -A
+            if git diff --cached --quiet; then
+              echo "No version changes to commit."
+            else
+              git commit -m "chore: release$PUBLISHED"
+              git push
+            fi
+
+            # Create tags for published packages
+            for pkg_dir in packages/*/; do
+              pkg_json="${pkg_dir}package.json"
+              [ -f "$pkg_json" ] || continue
+              PKG_NAME=$(node -e "console.log(require('./$pkg_json').name)")
+              PKG_VERSION=$(node -e "console.log(require('./$pkg_json').version)")
+              TAG="${PKG_NAME}@${PKG_VERSION}"
+              if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+                git tag "$TAG"
+                echo "🏷  Tagged $TAG"
+              fi
+            done
+            git push --tags
+
+            echo ""
+            echo "Released:$PUBLISHED"
+          else
+            echo ""
+            echo "No packages to publish."
+          fi
