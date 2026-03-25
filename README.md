@@ -10,22 +10,31 @@ Lightweight, isomorphic distributed locking library with pluggable backends. Wor
 - Configurable acquire timeout, retry interval, and running timeout
 - Decorator pattern for wrapping async functions
 - ESM, CommonJS, and browser (IIFE) builds
-- Zero runtime dependencies
 - Full TypeScript support
+
+## Packages
+
+| Package                                                   | Description                                        |
+| --------------------------------------------------------- | -------------------------------------------------- |
+| [`universal-lock`](packages/core)                         | Core library — lock factory, decorator, and types  |
+| [`@universal-lock/types`](packages/types)                 | Shared type definitions                            |
+| [`@universal-lock/memory`](packages/memory)               | In-memory backend (single-process)                 |
+| [`@universal-lock/web-locks`](packages/web-locks)         | Web Locks API backend (cross-tab, modern browsers) |
+| [`@universal-lock/local-storage`](packages/local-storage) | LocalStorage backend (cross-tab, older browsers)   |
 
 ## Installation
 
 ```bash
-npm install universal-lock
+npm install universal-lock @universal-lock/memory
 ```
 
 ## Quick Start
 
 ```typescript
-import { lockFactory, memoryBackendFactory } from "universal-lock";
+import { lockFactory } from "universal-lock";
+import { createBackend } from "@universal-lock/memory";
 
-const backend = memoryBackendFactory();
-const lock = lockFactory(backend);
+const lock = lockFactory(createBackend());
 
 const release = await lock.acquire("my-resource");
 try {
@@ -40,9 +49,10 @@ try {
 Wrap async functions with automatic lock management:
 
 ```typescript
-import { lockFactory, lockDecoratorFactory, memoryBackendFactory } from "universal-lock";
+import { lockFactory, lockDecoratorFactory } from "universal-lock";
+import { createBackend } from "@universal-lock/memory";
 
-const lock = lockFactory(memoryBackendFactory());
+const lock = lockFactory(createBackend());
 const withLock = lockDecoratorFactory(lock);
 
 const processOrder = withLock("orders", async (orderId: string) => {
@@ -55,10 +65,34 @@ await processOrder("order-123");
 
 ## Browser Usage
 
+### Web Locks API (recommended)
+
+Cross-tab locking using the native browser API. Locks are automatically released if a tab crashes.
+
+```typescript
+import { lockFactory } from "universal-lock";
+import { createBackend } from "@universal-lock/web-locks";
+
+const lock = lockFactory(createBackend());
+```
+
+### LocalStorage
+
+Cross-tab locking for older browsers that don't support the Web Locks API.
+
+```typescript
+import { lockFactory } from "universal-lock";
+import { createBackend } from "@universal-lock/local-storage";
+
+const lock = lockFactory(createBackend()); // default prefix "universal-lock:"
+const lock = lockFactory(createBackend("my-app:")); // custom prefix
+```
+
+### Script Tag
+
 ```html
 <script src="https://unpkg.com/universal-lock/dist/index.global.js"></script>
 <script>
-	const backend = UniversalLock.memoryBackendFactory();
 	const lock = UniversalLock.lockFactory(backend);
 </script>
 ```
@@ -80,9 +114,9 @@ const lock = lockFactory(backend, {
 Implement the `Backend` interface to use any storage:
 
 ```typescript
-import { Backend, lockFactory } from "universal-lock";
+import type { Backend } from "@universal-lock/types";
 
-const redisBackend: Backend = {
+const myBackend: Backend = {
 	setup: async () => {
 		// initialize connection
 	},
@@ -96,8 +130,6 @@ const redisBackend: Backend = {
 		// delete lock, verify ownership via value
 	},
 };
-
-const lock = lockFactory(redisBackend);
 ```
 
 The `value` parameter is a unique ID generated per acquisition. Backends must verify it on `renew` and `release` to prevent a client from operating on another client's lock.
@@ -116,9 +148,9 @@ Acquires a named lock. Returns a `release` function. Rejects if the lock cannot 
 
 Creates a decorator that wraps async functions with automatic lock acquire/release.
 
-### `memoryBackendFactory()`
+### `createBackend()` (from each backend package)
 
-Creates an in-memory backend. Suitable for single-process locking.
+Creates a backend instance. Each backend package exports a `createBackend` function.
 
 ## License
 

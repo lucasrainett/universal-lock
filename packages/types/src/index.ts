@@ -6,15 +6,15 @@ export type BackendSetupFunction = () => Promise<void>;
 export type BackendAcquireFunction = (
 	lockName: string,
 	stale: number,
-	value: string,
+	lockId: string,
 ) => Promise<void>;
 export type BackendRenewFunction = (
 	lockName: string,
-	value: string,
+	lockId: string,
 ) => Promise<void>;
 export type BackendReleaseFunction = (
 	lockName: string,
-	value: string,
+	lockId: string,
 ) => Promise<void>;
 
 export type Backend = {
@@ -40,3 +40,6 @@ export type LockAcquireFunction = (
 ) => Promise<LockReleaseFunction>;
 
 export type Lock = { acquire: LockAcquireFunction };
+
+export type TimestampLockEntry = { lockId: string; timestamp: number };
+export type CallbackLockEntry = { lockId: string; release: () => void };

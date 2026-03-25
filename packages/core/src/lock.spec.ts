@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, type Mock } from "vitest";
 import { lockFactory, lockDecoratorFactory } from "./lock";
-import { Backend } from "./types";
+import type { Backend } from "./types";
 
 const createMockBackend = (overrides: Partial<Backend> = {}): Backend => ({
 	setup: vi.fn().mockResolvedValue(undefined),
@@ -132,7 +132,7 @@ describe("lockFactory", () => {
 		expect(backend.release).toHaveBeenCalledTimes(1);
 	});
 
-	it("should use the same lock value for acquire, renew, and release", async () => {
+	it("should use the same lockId for acquire, renew, and release", async () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, shortConfig);
 
@@ -140,15 +140,15 @@ describe("lockFactory", () => {
 		await new Promise((resolve) => setTimeout(resolve, 15));
 		await release();
 
-		const acquireValue = (backend.acquire as Mock).mock.calls[0][2];
-		const renewValue = (backend.renew as Mock).mock.calls[0][1];
-		const releaseValue = (backend.release as Mock).mock.calls[0][1];
+		const acquireLockId = (backend.acquire as Mock).mock.calls[0][2];
+		const renewLockId = (backend.renew as Mock).mock.calls[0][1];
+		const releaseLockId = (backend.release as Mock).mock.calls[0][1];
 
-		expect(acquireValue).toBe(renewValue);
-		expect(acquireValue).toBe(releaseValue);
+		expect(acquireLockId).toBe(renewLockId);
+		expect(acquireLockId).toBe(releaseLockId);
 	});
 
-	it("should use different lock values for separate acquisitions", async () => {
+	it("should use different lockIds for separate acquisitions", async () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, shortConfig);
 
@@ -157,10 +157,10 @@ describe("lockFactory", () => {
 		const release2 = await lock.acquire("lock-2");
 		await release2();
 
-		const value1 = (backend.acquire as Mock).mock.calls[0][2];
-		const value2 = (backend.acquire as Mock).mock.calls[1][2];
+		const lockId1 = (backend.acquire as Mock).mock.calls[0][2];
+		const lockId2 = (backend.acquire as Mock).mock.calls[1][2];
 
-		expect(value1).not.toBe(value2);
+		expect(lockId1).not.toBe(lockId2);
 	});
 
 	it("should await setup before acquiring", async () => {

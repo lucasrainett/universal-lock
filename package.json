@@ -1,35 +1,13 @@
 {
-  "name": "universal-lock",
-  "version": "0.0.2",
-  "description": "Lightweight, isomorphic distributed locking library with pluggable backends",
-  "sideEffects": false,
-  "engines": {
-    "node": ">=16"
-  },
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "browser": "dist/index.global.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      },
-      "require": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      }
-    }
-  },
-  "files": [
-    "/dist"
-  ],
+  "private": true,
   "scripts": {
-    "build": "tsup",
-    "clean": "rm -rf dist",
+    "build": "pnpm -r build",
+    "clean": "pnpm -r clean",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish",
     "format": "prettier --write --ignore-unknown .",
-    "lint": "eslint src",
+    "lint": "eslint packages/*/src",
     "test": "vitest run --coverage",
     "prepare": "husky"
   },
@@ -42,31 +20,15 @@
       "prettier --write"
     ]
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/lucasrainett/universal-lock"
-  },
-  "keywords": [
-    "lock",
-    "mutex",
-    "distributed-lock",
-    "locking",
-    "concurrency",
-    "semaphore",
-    "isomorphic"
-  ],
-  "author": {
-    "name": "Lucas Rainett",
-    "email": "lucas@rainett.dev",
-    "url": "https://github.com/lucasrainett"
-  },
-  "license": "MIT",
   "packageManager": "pnpm@10.11.1",
   "devDependencies": {
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.30.0",
     "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "4.1.1",
     "eslint": "^10.1.0",
     "husky": "^9.1.7",
+    "jiti": "^2.6.1",
     "lint-staged": "^16.1.0",
     "prettier": "^3.5.3",
     "tsup": "^8.5.1",

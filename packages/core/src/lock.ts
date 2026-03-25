@@ -1,10 +1,10 @@
-import {
+import type {
 	AsyncFunction,
 	Lock,
 	Backend,
 	LockConfiguration,
 	LockReleaseFunction,
-} from "./types";
+} from "@universal-lock/types";
 import { asyncInterval, generateId } from "./util";
 
 const defaultConfiguration: LockConfiguration = {

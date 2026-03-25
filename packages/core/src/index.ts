@@ -1,7 +1,6 @@
 import { lockFactory, lockDecoratorFactory } from "./lock";
-import { memoryBackendFactory } from "./backends/MemoryBackend";
 
-export { memoryBackendFactory, lockFactory, lockDecoratorFactory };
+export { lockFactory, lockDecoratorFactory };
 
 export type {
 	AsyncFunction,
@@ -15,4 +14,6 @@ export type {
 	LockConfiguration,
 	LockAcquireFunction,
 	LockReleaseFunction,
-} from "./types";
+	TimestampLockEntry,
+	CallbackLockEntry,
+} from "@universal-lock/types";

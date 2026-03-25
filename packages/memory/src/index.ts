@@ -1,42 +1,41 @@
-import {
+import type {
 	Backend,
 	BackendAcquireFunction,
 	BackendFactory,
 	BackendReleaseFunction,
 	BackendRenewFunction,
 	BackendSetupFunction,
-} from "../types";
+	TimestampLockEntry,
+} from "@universal-lock/types";
 
-type LockEntry = { value: string; timestamp: number };
-
-export const memoryBackendFactory: BackendFactory = (): Backend => {
-	const locks: Record<string, LockEntry> = {};
+export const createBackend: BackendFactory = (): Backend => {
+	const locks: Record<string, TimestampLockEntry> = {};
 
 	const setup: BackendSetupFunction = async () => {};
 
-	const acquire: BackendAcquireFunction = async (lockName, stale, value) => {
+	const acquire: BackendAcquireFunction = async (lockName, stale, lockId) => {
 		const now = Date.now();
 		const existing = locks[lockName];
 		const lockExpired = existing && existing.timestamp + stale <= now;
 		if (!existing || lockExpired) {
-			locks[lockName] = { value, timestamp: now };
+			locks[lockName] = { lockId, timestamp: now };
 		} else {
 			throw new Error(`${lockName} already locked`);
 		}
 	};
 
-	const renew: BackendRenewFunction = async (lockName, value) => {
+	const renew: BackendRenewFunction = async (lockName, lockId) => {
 		const existing = locks[lockName];
 		if (!existing) throw new Error(`${lockName} not locked`);
-		if (existing.value !== value)
+		if (existing.lockId !== lockId)
 			throw new Error(`${lockName} not owned by caller`);
 		existing.timestamp = Date.now();
 	};
 
-	const release: BackendReleaseFunction = async (lockName, value) => {
+	const release: BackendReleaseFunction = async (lockName, lockId) => {
 		const existing = locks[lockName];
 		if (!existing) throw new Error(`${lockName} not locked`);
-		if (existing.value !== value)
+		if (existing.lockId !== lockId)
 			throw new Error(`${lockName} not owned by caller`);
 		delete locks[lockName];
 	};

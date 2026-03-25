@@ -1,0 +1,29 @@
+core:
+  - changed-files:
+      - any-glob-to-any-file: packages/core/**
+
+types:
+  - changed-files:
+      - any-glob-to-any-file: packages/types/**
+
+memory:
+  - changed-files:
+      - any-glob-to-any-file: packages/memory/**
+
+web-locks:
+  - changed-files:
+      - any-glob-to-any-file: packages/web-locks/**
+
+local-storage:
+  - changed-files:
+      - any-glob-to-any-file: packages/local-storage/**
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "*.md"
+          - "**/*.md"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: .github/**
