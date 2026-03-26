@@ -43,6 +43,8 @@ export const createBackend = (prefix: string = DEFAULT_PREFIX): Backend => {
 		const lockExpired = existing && existing.timestamp + stale <= now;
 		if (!existing || lockExpired) {
 			write(lockName, { lockId, timestamp: now });
+			// Read-back verification: if another tab wrote between our write and read,
+			// we'll see their lockId here and know we lost the race
 			const verification = read(lockName);
 			if (!verification || verification.lockId !== lockId) {
 				throw new Error(`${lockName} already locked`);

@@ -358,10 +358,13 @@ describe("lockDecoratorFactory", () => {
 		const withLock = lockDecoratorFactory(lock);
 
 		let receivedSignal: AbortSignal | undefined;
-		const fn = withLock("test-lock", async (signal: AbortSignal) => {
-			receivedSignal = signal;
-			return "done";
-		});
+		const fn = withLock(
+			{ lockName: "test-lock", signal: true },
+			async (signal: AbortSignal) => {
+				receivedSignal = signal;
+				return "done";
+			},
+		);
 
 		await fn();
 		expect(receivedSignal).toBeInstanceOf(AbortSignal);
@@ -380,11 +383,14 @@ describe("lockDecoratorFactory", () => {
 		const withLock = lockDecoratorFactory(lock);
 
 		let signalAborted = false;
-		const fn = withLock("test-lock", async (signal: AbortSignal) => {
-			await new Promise((resolve) => setTimeout(resolve, 80));
-			signalAborted = signal.aborted;
-			return "done";
-		});
+		const fn = withLock(
+			{ lockName: "test-lock", signal: true },
+			async (signal: AbortSignal) => {
+				await new Promise((resolve) => setTimeout(resolve, 80));
+				signalAborted = signal.aborted;
+				return "done";
+			},
+		);
 
 		await fn();
 		expect(signalAborted).toBe(true);

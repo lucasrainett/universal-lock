@@ -31,6 +31,7 @@ export function lockFactory(
 		onLockLost,
 		onEvent,
 	}: LockConfiguration = { ...defaultConfiguration, ...configuration };
+	// Eagerly invoke backend setup so it runs once, not per-acquire
 	const setupPromise = setup();
 
 	return {
@@ -38,8 +39,10 @@ export function lockFactory(
 			await setupPromise;
 			return new Promise<LockReleaseFunction>((resolve, reject) => {
 				const lockId = generateId();
+				// AbortController lets consumers detect lock loss via release.signal
 				const abortController = new AbortController();
 
+				// Reject the acquire promise if the lock isn't obtained within the timeout
 				const acquireTimeout = setTimeout(async () => {
 					await stopAcquireInterval();
 					onEvent({ type: "acquireTimeout", lockName });
@@ -50,20 +53,25 @@ export function lockFactory(
 					);
 				}, acquireFailTimeout);
 
+				// Retry acquisition at a fixed interval until success or timeout
 				const stopAcquireInterval = asyncInterval(async () => {
 					try {
 						await acquire(lockName, stale, lockId);
 					} catch {
+						// Acquire failed (lock held by another owner) — silently retry on next interval
 						return;
 					}
 
+					// Lock acquired — stop retrying and cancel the timeout
 					clearTimeout(acquireTimeout);
 					stopAcquireInterval();
 
 					let runningTimer: ReturnType<typeof setTimeout> | null =
 						null;
+					// Guards against double-release from concurrent timeout and manual release
 					let released = false;
 
+					// Low-level release: idempotent, clears the running timer, notifies the backend
 					const doRelease = async () => {
 						if (released) return;
 						released = true;
@@ -72,12 +80,14 @@ export function lockFactory(
 						onEvent({ type: "released", lockName });
 					};
 
+					// High-level release: stops renewals first, then releases the lock
 					const releaseLock = async () => {
 						if (released) return;
 						await stopRenewInterval();
 						await doRelease();
 					};
 
+					// Periodically renew the lock to prevent it from going stale
 					const stopRenewInterval = asyncInterval(async () => {
 						try {
 							await renew(lockName, lockId);
@@ -94,6 +104,7 @@ export function lockFactory(
 								reason: "renewFailed",
 							});
 							onLockLost(lockName, "renewFailed");
+							// Signal consumers that the lock is no longer held
 							abortController.abort();
 							// Don't await stopRenewInterval here — we're inside it
 							stopRenewInterval();
@@ -101,6 +112,7 @@ export function lockFactory(
 						}
 					}, renewInterval);
 
+					// Safety net: auto-release if the caller holds the lock too long
 					runningTimer = setTimeout(async () => {
 						onEvent({
 							type: "lockLost",
@@ -114,6 +126,8 @@ export function lockFactory(
 
 					onEvent({ type: "acquired", lockName });
 
+					// Attach the abort signal to the release function so callers can
+					// detect lock loss (e.g. via release.signal.aborted or addEventListener)
 					const releaseFn = Object.assign(releaseLock, {
 						signal: abortController.signal,
 					}) as LockReleaseFunction;
@@ -124,11 +138,45 @@ export function lockFactory(
 	};
 }
 
+/**
+ * Creates a decorator that wraps an async function with automatic lock
+ * acquisition and release. The lock is always released in the finally
+ * block, even if fn throws.
+ *
+ * First argument is either a lock name string or an options object.
+ * Pass `{ lockName, signal: true }` to inject an AbortSignal as the
+ * first argument so the function can react to lock loss during execution.
+ */
 export function lockDecoratorFactory(lock: Lock) {
-	return <A extends unknown[], R>(
+	// Overload: string lock name — fn keeps its original signature
+	function decorator<A extends unknown[], R>(
 		lockName: string,
+		fn: (...args: A) => Promise<R>,
+	): (...args: A) => Promise<R>;
+
+	// Overload: options object with signal — fn receives AbortSignal as first arg
+	function decorator<A extends unknown[], R>(
+		options: { lockName: string; signal: true },
 		fn: (signal: AbortSignal, ...args: A) => Promise<R>,
-	) => {
+	): (...args: A) => Promise<R>;
+
+	// Overload: options object without signal — fn keeps its original signature
+	function decorator<A extends unknown[], R>(
+		options: { lockName: string; signal?: false },
+		fn: (...args: A) => Promise<R>,
+	): (...args: A) => Promise<R>;
+
+	function decorator<A extends unknown[], R>(
+		lockNameOrOptions: string | { lockName: string; signal?: boolean },
+		fn:
+			| ((...args: A) => Promise<R>)
+			| ((signal: AbortSignal, ...args: A) => Promise<R>),
+	) {
+		const { lockName, signal: injectSignal } =
+			typeof lockNameOrOptions === "string"
+				? { lockName: lockNameOrOptions, signal: false }
+				: lockNameOrOptions;
+
 		return async (...args: A): Promise<R> => {
 			const release = await lock.acquire(lockName);
 			let released = false;
@@ -138,10 +186,18 @@ export function lockDecoratorFactory(lock: Lock) {
 				await release();
 			};
 			try {
-				return await fn(release.signal, ...args);
+				// Only inject the AbortSignal when the caller opted in
+				if (injectSignal) {
+					return await (
+						fn as (signal: AbortSignal, ...args: A) => Promise<R>
+					)(release.signal, ...args);
+				}
+				return await (fn as (...args: A) => Promise<R>)(...args);
 			} finally {
 				await safeRelease();
 			}
 		};
-	};
+	}
+
+	return decorator;
 }

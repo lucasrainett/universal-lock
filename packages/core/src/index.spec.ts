@@ -87,7 +87,7 @@ describe("integration", () => {
 		const withLock = lockDecoratorFactory(lock);
 
 		const fn = withLock(
-			"test-lock",
+			{ lockName: "test-lock", signal: true },
 			async (signal: AbortSignal, x: number) => {
 				expect(signal).toBeInstanceOf(AbortSignal);
 				return x * 2;
