@@ -1,6 +1,6 @@
 {
   "name": "@universal-lock/memory",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "In-memory backend for universal-lock",
   "sideEffects": false,
   "engines": {

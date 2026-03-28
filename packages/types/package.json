@@ -1,6 +1,6 @@
 {
   "name": "@universal-lock/types",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Type definitions for universal-lock",
   "sideEffects": false,
   "main": "dist/index.js",

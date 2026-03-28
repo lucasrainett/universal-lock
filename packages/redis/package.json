@@ -1,6 +1,6 @@
 {
   "name": "@universal-lock/redis",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Redis backend for universal-lock — distributed locking via Lua scripts",
   "sideEffects": false,
   "engines": {

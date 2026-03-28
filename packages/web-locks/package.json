@@ -1,6 +1,6 @@
 {
   "name": "@universal-lock/web-locks",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "Web Locks API backend for universal-lock",
   "sideEffects": false,
   "main": "dist/index.js",
