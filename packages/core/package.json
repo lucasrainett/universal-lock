@@ -49,7 +49,7 @@
     "url": "https://github.com/lucasrainett"
   },
   "license": "MIT",
-  "dependencies": {
+  "devDependencies": {
     "@universal-lock/types": "workspace:*"
   }
 }

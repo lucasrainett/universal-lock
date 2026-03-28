@@ -68,6 +68,25 @@ const lock = lockFactory(createBackend());
 
 See the [core package documentation](packages/core) for full API details, configuration options, lock loss detection, decorator pattern, and custom backend implementation.
 
+## Examples
+
+Ready-to-run examples are in the [`examples/`](examples) folder. Each example is its own directory with separate files for lock setup, business logic, and entry point — showing how to structure locks as singletons in a real application.
+
+| Example                                                | Description                                         |
+| ------------------------------------------------------ | --------------------------------------------------- |
+| [`basic/`](examples/basic)                             | Acquire and release a lock                          |
+| [`decorator/`](examples/decorator)                     | Wrap async functions with automatic lock management |
+| [`lock-loss-detection/`](examples/lock-loss-detection) | AbortSignal, onLockLost, and lifecycle events       |
+| [`concurrency/`](examples/concurrency)                 | Multiple workers competing for the same resource    |
+| [`redis/`](examples/redis)                             | Distributed locking with Redis                      |
+| [`custom-backend/`](examples/custom-backend)           | Implement your own storage adapter                  |
+
+Run any example with:
+
+```bash
+npx tsx examples/basic/main.ts
+```
+
 ## License
 
 [MIT](LICENSE)

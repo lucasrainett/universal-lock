@@ -5,10 +5,10 @@ Shared TypeScript type definitions for the [`universal-lock`](https://github.com
 ## Installation
 
 ```bash
-npm install @universal-lock/types
+npm install -D @universal-lock/types
 ```
 
-> **Note:** You typically don't need to install this package directly. It is included as a dependency of `universal-lock` and all backend packages.
+> **Note:** You typically don't need to install this package directly. Types are bundled into each package's `.d.ts` files at build time. Install this package only if you need to import types directly (e.g., when implementing a custom backend).
 
 ## Types
 
