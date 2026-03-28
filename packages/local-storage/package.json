@@ -1,6 +1,6 @@
 {
   "name": "@universal-lock/local-storage",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "LocalStorage backend for universal-lock",
   "sideEffects": false,
   "main": "dist/index.js",
