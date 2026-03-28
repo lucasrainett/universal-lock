@@ -59,7 +59,7 @@ Push your branch and open a PR targeting `master`:
 git push origin feat/my-feature
 ```
 
-CI will automatically run lint, tests, and build across Node.js 20 and 22. All checks must pass before merging.
+CI will automatically run lint, tests, and build on Node.js 22. All checks must pass before merging.
 
 ### 4. Review and merge
 

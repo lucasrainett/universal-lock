@@ -15,7 +15,7 @@ const shortConfig = {
 	acquireFailTimeout: 200,
 	stale: 100,
 	renewInterval: 10,
-	runningTimeout: 200,
+	maxHoldTime: 200,
 };
 
 describe("lockFactory", () => {
@@ -101,11 +101,11 @@ describe("lockFactory", () => {
 		);
 	});
 
-	it("should auto-release after runningTimeout", async () => {
+	it("should auto-release after maxHoldTime", async () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 50,
+			maxHoldTime: 50,
 		});
 
 		await lock.acquire("test-lock");
@@ -121,7 +121,7 @@ describe("lockFactory", () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 100,
+			maxHoldTime: 100,
 		});
 
 		const release = await lock.acquire("test-lock");
@@ -228,12 +228,12 @@ describe("lockFactory", () => {
 		);
 	});
 
-	it("should call onLockLost when runningTimeout fires", async () => {
+	it("should call onLockLost when maxHoldTime fires", async () => {
 		const onLockLost = vi.fn();
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 30,
+			maxHoldTime: 30,
 			onLockLost,
 		});
 
@@ -243,11 +243,11 @@ describe("lockFactory", () => {
 		expect(onLockLost).toHaveBeenCalledWith("test-lock", "timeout");
 	});
 
-	it("should abort signal when runningTimeout fires", async () => {
+	it("should abort signal when maxHoldTime fires", async () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 30,
+			maxHoldTime: 30,
 		});
 
 		const release = await lock.acquire("test-lock");
@@ -289,6 +289,42 @@ describe("lockFactory", () => {
 		expect(onEvent).toHaveBeenCalledWith(
 			expect.objectContaining({ type: "acquireTimeout" }),
 		);
+	});
+
+	it("should only call backend.release once when manual release overlaps with in-flight renew failure", async () => {
+		// This test triggers the doRelease idempotency guard (line 76).
+		// Scenario: releaseLock() is called, passes its own guard, then awaits
+		// stopRenewInterval(). During that await the in-flight renew handler
+		// throws, and the catch block calls doRelease() first. When
+		// stopRenewInterval resolves, releaseLock proceeds to call doRelease()
+		// again — hitting the "if (released) return" guard.
+		let releasePromise: Promise<void> | null = null;
+		let renewCount = 0;
+		const backend = createMockBackend({
+			renew: vi.fn().mockImplementation(async () => {
+				renewCount++;
+				if (renewCount >= 2) {
+					// On the second renew, trigger manual release concurrently
+					// while this renew is about to fail
+					if (!releasePromise) {
+						releasePromise = releaseFn();
+					}
+					throw new Error("renew failed");
+				}
+			}),
+		});
+		const lock = lockFactory(backend, {
+			...shortConfig,
+			renewInterval: 10,
+			maxHoldTime: 500,
+		});
+
+		const releaseFn = await lock.acquire("test-lock");
+		// Wait for the race to happen
+		await new Promise((resolve) => setTimeout(resolve, 50));
+		if (releasePromise) await releasePromise;
+
+		expect(backend.release).toHaveBeenCalledTimes(1);
 	});
 
 	it("should await setup before acquiring", async () => {
@@ -334,11 +370,11 @@ describe("lockDecoratorFactory", () => {
 		expect(order).toEqual(["acquire", "fn", "release"]);
 	});
 
-	it("should only release once when runningTimeout fires before function completes", async () => {
+	it("should only release once when maxHoldTime fires before function completes", async () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 30,
+			maxHoldTime: 30,
 		});
 		const withLock = lockDecoratorFactory(lock);
 
@@ -358,10 +394,13 @@ describe("lockDecoratorFactory", () => {
 		const withLock = lockDecoratorFactory(lock);
 
 		let receivedSignal: AbortSignal | undefined;
-		const fn = withLock("test-lock", async (signal: AbortSignal) => {
-			receivedSignal = signal;
-			return "done";
-		});
+		const fn = withLock(
+			{ lockName: "test-lock", signal: true },
+			async (signal: AbortSignal) => {
+				receivedSignal = signal;
+				return "done";
+			},
+		);
 
 		await fn();
 		expect(receivedSignal).toBeInstanceOf(AbortSignal);
@@ -380,14 +419,38 @@ describe("lockDecoratorFactory", () => {
 		const withLock = lockDecoratorFactory(lock);
 
 		let signalAborted = false;
-		const fn = withLock("test-lock", async (signal: AbortSignal) => {
-			await new Promise((resolve) => setTimeout(resolve, 80));
-			signalAborted = signal.aborted;
-			return "done";
-		});
+		const fn = withLock(
+			{ lockName: "test-lock", signal: true },
+			async (signal: AbortSignal) => {
+				await new Promise((resolve) => setTimeout(resolve, 80));
+				signalAborted = signal.aborted;
+				return "done";
+			},
+		);
 
 		await fn();
 		expect(signalAborted).toBe(true);
+	});
+
+	it("should not double-release when maxHoldTime fires during function execution", async () => {
+		const backend = createMockBackend();
+		const lock = lockFactory(backend, {
+			...shortConfig,
+			maxHoldTime: 20,
+		});
+		const withLock = lockDecoratorFactory(lock);
+
+		const fn = withLock("test-lock", async () => {
+			await new Promise((resolve) => setTimeout(resolve, 60));
+			return "result";
+		});
+
+		await fn();
+		// Wait for any remaining timers
+		await new Promise((resolve) => setTimeout(resolve, 40));
+		// Core releases via maxHoldTime, then decorator's finally calls safeRelease again
+		// The safeRelease guard should prevent a second release call
+		expect(backend.release).toHaveBeenCalledTimes(1);
 	});
 
 	it("should release lock even if function throws", async () => {

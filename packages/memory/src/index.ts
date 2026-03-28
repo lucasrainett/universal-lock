@@ -16,6 +16,8 @@ export const createBackend: BackendFactory = (): Backend => {
 	const acquire: BackendAcquireFunction = async (lockName, stale, lockId) => {
 		const now = Date.now();
 		const existing = locks[lockName];
+		// A lock is considered expired if its timestamp + stale duration has passed,
+		// allowing takeover of locks from crashed processes that never released
 		const lockExpired = existing && existing.timestamp + stale <= now;
 		if (!existing || lockExpired) {
 			locks[lockName] = { lockId, timestamp: now };

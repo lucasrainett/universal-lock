@@ -16,6 +16,8 @@ export interface RedisBackendOptions {
 
 const DEFAULT_PREFIX = "universal-lock:";
 
+// Atomically set the lock key only if it doesn't exist (NX), with a TTL in ms (PX).
+// This ensures only one client can hold the lock at a time.
 const ACQUIRE_SCRIPT = `
 if redis.call('SET', KEYS[1], ARGV[1], 'NX', 'PX', ARGV[2]) then
   return 1
@@ -23,6 +25,8 @@ end
 return 0
 `;
 
+// Renew only if the caller still owns the lock (value matches lockId).
+// Resets the TTL to prevent the lock from expiring while still in use.
 const RENEW_SCRIPT = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   redis.call('PEXPIRE', KEYS[1], ARGV[2])
@@ -31,6 +35,8 @@ end
 return 0
 `;
 
+// Delete only if the caller owns the lock, preventing one client from
+// releasing another client's lock after a stale takeover.
 const RELEASE_SCRIPT = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
   redis.call('DEL', KEYS[1])
@@ -44,6 +50,7 @@ export const createBackend = (
 	options: RedisBackendOptions = {},
 ): Backend => {
 	const prefix = options.prefix ?? DEFAULT_PREFIX;
+	// Cache the stale TTL per lock so renew can re-apply the same expiration
 	const ttls = new Map<string, number>();
 
 	const key = (lockName: string) => prefix + lockName;

@@ -17,6 +17,10 @@ export const createBackend: BackendFactory = (): Backend => {
 		}
 	};
 
+	// The Web Locks API holds a lock for the duration of the callback's returned promise.
+	// To control when the lock is released, we return a promise whose resolve function
+	// (releaseResolve) is stored and called later in the release() method.
+	// ifAvailable: true makes this non-blocking — fails immediately if the lock is held.
 	const acquire: BackendAcquireFunction = async (
 		lockName,
 		_stale,
@@ -26,9 +30,11 @@ export const createBackend: BackendFactory = (): Backend => {
 			navigator.locks.request(lockName, { ifAvailable: true }, (lock) => {
 				if (!lock) {
 					reject(new Error(`${lockName} already locked`));
+					// Must return a resolved promise to complete the lock request callback
 					return Promise.resolve();
 				}
 
+				// Return an unresolved promise — the browser holds the lock until this resolves
 				return new Promise<void>((releaseResolve) => {
 					locks[lockName] = { lockId, release: releaseResolve };
 					resolve();
@@ -37,6 +43,8 @@ export const createBackend: BackendFactory = (): Backend => {
 		});
 	};
 
+	// Renew is a no-op for Web Locks — the browser holds the lock until the promise resolves,
+	// so there is no TTL to refresh. We only validate ownership here.
 	const renew: BackendRenewFunction = async (lockName, lockId) => {
 		const existing = locks[lockName];
 		if (!existing) throw new Error(`${lockName} not locked`);

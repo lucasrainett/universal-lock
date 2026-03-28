@@ -44,7 +44,7 @@ describe("integration", () => {
 		acquireFailTimeout: 200,
 		stale: 100,
 		renewInterval: 10,
-		runningTimeout: 200,
+		maxHoldTime: 200,
 	};
 
 	it("should acquire and release", async () => {
@@ -87,7 +87,7 @@ describe("integration", () => {
 		const withLock = lockDecoratorFactory(lock);
 
 		const fn = withLock(
-			"test-lock",
+			{ lockName: "test-lock", signal: true },
 			async (signal: AbortSignal, x: number) => {
 				expect(signal).toBeInstanceOf(AbortSignal);
 				return x * 2;
