@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TimestampLockEntry` and `CallbackLockEntry` shared types
 - Lock ownership verification with unique lock IDs
 - Acquire timeout (`acquireFailTimeout`) rejects if lock cannot be acquired in time
-- Running timeout (`runningTimeout`) auto-releases locks held too long
+- Running timeout (`maxHoldTime`) auto-releases locks held too long
 - Double-release protection in `lockFactory` and `lockDecoratorFactory`
 - `generateId` utility for isomorphic unique ID generation
 - ESLint with TypeScript support and `consistent-type-imports` rule

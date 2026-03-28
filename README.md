@@ -1,6 +1,6 @@
 # universal-lock
 
-Lightweight, isomorphic distributed locking library with pluggable backends. Works in Node.js and browsers.
+Lightweight, isomorphic universal locking library with pluggable backends. Works in Node.js and browsers.
 
 ## Features
 

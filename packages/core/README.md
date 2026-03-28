@@ -1,6 +1,6 @@
 # universal-lock
 
-Lightweight, isomorphic distributed locking library with pluggable backends. Works in Node.js and browsers.
+Lightweight, isomorphic universal locking library with pluggable backends. Works in Node.js and browsers.
 
 Part of the [`universal-lock`](https://github.com/lucasrainett/universal-lock) monorepo.
 
@@ -47,7 +47,7 @@ const lock = lockFactory(backend, {
 	acquireFailTimeout: 5000, // max wait before failing acquisition (default: 5000)
 	stale: 1000, // ignore locks older than this in ms (default: 1000)
 	renewInterval: 250, // lock renewal interval in ms (default: 250)
-	runningTimeout: 2000, // auto-release after this duration in ms (default: 2000)
+	maxHoldTime: 2000, // auto-release after this duration in ms (default: 2000)
 	onLockLost: (name, reason) => {}, // called when lock is lost (optional)
 	onEvent: (event) => {}, // lifecycle events (optional)
 });
@@ -59,7 +59,9 @@ Acquires a named lock. Returns a `release` function with a `.signal: AbortSignal
 
 ### `lockDecoratorFactory(lock)`
 
-Creates a decorator that wraps async functions with automatic lock acquire/release. The wrapped function receives an `AbortSignal` as its first argument.
+Creates a decorator that wraps async functions with automatic lock acquire/release.
+
+The first argument is either a lock name string or an options object. When a string is passed, the wrapped function keeps its original signature. Pass `{ lockName, signal: true }` to inject an `AbortSignal` as the first argument so the function can react to lock loss.
 
 ```typescript
 import { lockFactory, lockDecoratorFactory } from "universal-lock";
@@ -68,12 +70,20 @@ import { createBackend } from "@universal-lock/memory";
 const lock = lockFactory(createBackend());
 const withLock = lockDecoratorFactory(lock);
 
-const processOrder = withLock("orders", async (signal: AbortSignal, orderId: string) => {
-	if (signal.aborted) return;
+// Simple usage — no signal injection
+const processOrder = withLock("orders", async (orderId: string) => {
 	return await handleOrder(orderId);
 });
 
 await processOrder("order-123");
+
+// With signal injection for lock loss detection
+const processOrderSafe = withLock({ lockName: "orders", signal: true }, async (signal: AbortSignal, orderId: string) => {
+	if (signal.aborted) return;
+	return await handleOrder(orderId);
+});
+
+await processOrderSafe("order-123");
 ```
 
 ## Lock Loss Detection

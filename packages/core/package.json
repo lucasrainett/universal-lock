@@ -1,7 +1,7 @@
 {
   "name": "universal-lock",
   "version": "0.0.2",
-  "description": "Lightweight, isomorphic distributed locking library with pluggable backends",
+  "description": "Lightweight, isomorphic universal locking library with pluggable backends",
   "sideEffects": false,
   "engines": {
     "node": ">=20"

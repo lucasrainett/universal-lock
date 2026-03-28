@@ -44,7 +44,7 @@ describe("integration", () => {
 		acquireFailTimeout: 200,
 		stale: 100,
 		renewInterval: 10,
-		runningTimeout: 200,
+		maxHoldTime: 200,
 	};
 
 	it("should acquire and release", async () => {

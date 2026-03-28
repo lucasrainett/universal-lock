@@ -15,7 +15,7 @@ const shortConfig = {
 	acquireFailTimeout: 200,
 	stale: 100,
 	renewInterval: 10,
-	runningTimeout: 200,
+	maxHoldTime: 200,
 };
 
 describe("lockFactory", () => {
@@ -101,11 +101,11 @@ describe("lockFactory", () => {
 		);
 	});
 
-	it("should auto-release after runningTimeout", async () => {
+	it("should auto-release after maxHoldTime", async () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 50,
+			maxHoldTime: 50,
 		});
 
 		await lock.acquire("test-lock");
@@ -121,7 +121,7 @@ describe("lockFactory", () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 100,
+			maxHoldTime: 100,
 		});
 
 		const release = await lock.acquire("test-lock");
@@ -228,12 +228,12 @@ describe("lockFactory", () => {
 		);
 	});
 
-	it("should call onLockLost when runningTimeout fires", async () => {
+	it("should call onLockLost when maxHoldTime fires", async () => {
 		const onLockLost = vi.fn();
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 30,
+			maxHoldTime: 30,
 			onLockLost,
 		});
 
@@ -243,11 +243,11 @@ describe("lockFactory", () => {
 		expect(onLockLost).toHaveBeenCalledWith("test-lock", "timeout");
 	});
 
-	it("should abort signal when runningTimeout fires", async () => {
+	it("should abort signal when maxHoldTime fires", async () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 30,
+			maxHoldTime: 30,
 		});
 
 		const release = await lock.acquire("test-lock");
@@ -334,11 +334,11 @@ describe("lockDecoratorFactory", () => {
 		expect(order).toEqual(["acquire", "fn", "release"]);
 	});
 
-	it("should only release once when runningTimeout fires before function completes", async () => {
+	it("should only release once when maxHoldTime fires before function completes", async () => {
 		const backend = createMockBackend();
 		const lock = lockFactory(backend, {
 			...shortConfig,
-			runningTimeout: 30,
+			maxHoldTime: 30,
 		});
 		const withLock = lockDecoratorFactory(lock);
 

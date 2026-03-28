@@ -13,7 +13,7 @@ const defaultConfiguration: LockConfiguration = {
 	acquireFailTimeout: 5000,
 	stale: 1000,
 	renewInterval: 250,
-	runningTimeout: 2000,
+	maxHoldTime: 2000,
 	onLockLost: noop,
 	onEvent: noop,
 };
@@ -27,7 +27,7 @@ export function lockFactory(
 		acquireFailTimeout,
 		stale,
 		renewInterval,
-		runningTimeout,
+		maxHoldTime,
 		onLockLost,
 		onEvent,
 	}: LockConfiguration = { ...defaultConfiguration, ...configuration };
@@ -66,7 +66,7 @@ export function lockFactory(
 					clearTimeout(acquireTimeout);
 					stopAcquireInterval();
 
-					let runningTimer: ReturnType<typeof setTimeout> | null =
+					let maxHoldTimer: ReturnType<typeof setTimeout> | null =
 						null;
 					// Guards against double-release from concurrent timeout and manual release
 					let released = false;
@@ -75,7 +75,7 @@ export function lockFactory(
 					const doRelease = async () => {
 						if (released) return;
 						released = true;
-						if (runningTimer) clearTimeout(runningTimer);
+						if (maxHoldTimer) clearTimeout(maxHoldTimer);
 						await release(lockName, lockId);
 						onEvent({ type: "released", lockName });
 					};
@@ -113,7 +113,7 @@ export function lockFactory(
 					}, renewInterval);
 
 					// Safety net: auto-release if the caller holds the lock too long
-					runningTimer = setTimeout(async () => {
+					maxHoldTimer = setTimeout(async () => {
 						onEvent({
 							type: "lockLost",
 							lockName,
@@ -122,7 +122,7 @@ export function lockFactory(
 						onLockLost(lockName, "timeout");
 						abortController.abort();
 						await releaseLock();
-					}, runningTimeout);
+					}, maxHoldTime);
 
 					onEvent({ type: "acquired", lockName });
 

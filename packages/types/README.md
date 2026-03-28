@@ -41,7 +41,7 @@ type LockConfiguration = {
 	acquireFailTimeout: number;
 	stale: number;
 	renewInterval: number;
-	runningTimeout: number;
+	maxHoldTime: number;
 	onLockLost: (lockName: string, reason: "renewFailed" | "timeout") => void;
 	onEvent: (event: LockEvent) => void;
 };
