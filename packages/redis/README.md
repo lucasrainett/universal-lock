@@ -65,17 +65,6 @@ const redisClient = {
 const lock = lockFactory(createBackend(redisClient));
 ```
 
-### Browser (IIFE)
-
-```html
-<script src="https://unpkg.com/@universal-lock/redis/dist/index.global.js"></script>
-<script src="https://unpkg.com/universal-lock/dist/index.global.js"></script>
-<script>
-	const backend = UniversalLockRedis.createBackend(redisClient);
-	const lock = UniversalLock.lockFactory(backend);
-</script>
-```
-
 ## API
 
 ### `createBackend(client, options?)`

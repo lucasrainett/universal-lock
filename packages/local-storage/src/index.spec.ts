@@ -81,7 +81,7 @@ describe("localStorageBackend", () => {
 			const backend = createBackend();
 			const stale = 50;
 			await backend.acquire("lock-1", stale, "owner-a");
-			await new Promise((resolve) => setTimeout(resolve, stale));
+			await new Promise((resolve) => setTimeout(resolve, stale + 10));
 			await expect(
 				backend.acquire("lock-1", stale, "owner-b"),
 			).resolves.toBeUndefined();

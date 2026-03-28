@@ -99,6 +99,8 @@ flowchart TD
     N --> O[Push tags to remote]
 ```
 
+**Environment:** The release job runs in the `npm` GitHub environment, which controls access to the `NPM_TOKEN` secret.
+
 **Concurrency:** Only one release job runs at a time (`cancel-in-progress: false`), ensuring sequential publishes.
 
 **Detailed steps:**

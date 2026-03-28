@@ -5,16 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2026-03-28
 
 ### Added
 
 - Lock loss detection via `AbortSignal` on the release function (`release.signal`)
-- `onLockLost` callback — notifies when lock is lost due to renewal failure or running timeout
+- `onLockLost` callback — notifies when lock is lost due to renewal failure or max hold time
 - `onEvent` callback — lifecycle events: acquired, renewed, renewFailed, lockLost, released, acquireTimeout
 - `LockEvent` discriminated union type
 - Renewal error handling — renew failures now trigger lock loss notification and auto-release
-- Running timeout notification — `onLockLost` and `AbortSignal` fire before auto-release
+- Max hold time notification — `onLockLost` and `AbortSignal` fire before auto-release
 - `lockDecoratorFactory` optionally passes `AbortSignal` as first argument to wrapped functions (opt-in via `{ signal: true }`)
 - `@universal-lock/redis` package — Redis backend for distributed cross-process/server locking via atomic Lua scripts
 - LocalStorage CAS verification — re-reads after write to detect concurrent overwrites

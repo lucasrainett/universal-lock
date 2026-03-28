@@ -72,7 +72,7 @@ After merge, the release workflow automatically:
 1. Detects which packages have source changes since their last published version
 2. Bumps the patch version for changed packages
 3. Publishes to npm
-4. Creates git tags (e.g., `@universal-lock/memory@0.0.3`)
+4. Creates git tags (e.g., `@universal-lock/memory@1.0.1`)
 5. Commits the version bumps back to `master`
 
 No manual versioning, changelogs, or publish steps are needed.
@@ -92,9 +92,10 @@ mkdir -p packages/my-backend/src
 ```json
 {
 	"name": "@universal-lock/my-backend",
-	"version": "0.0.0",
+	"version": "1.0.0",
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",
+	"browser": "dist/index.global.js",
 	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
@@ -104,7 +105,7 @@ mkdir -p packages/my-backend/src
 	},
 	"files": ["/dist"],
 	"scripts": { "build": "tsup", "clean": "rm -rf dist" },
-	"dependencies": { "@universal-lock/types": "workspace:*" }
+	"devDependencies": { "@universal-lock/types": "workspace:*" }
 }
 ```
 
@@ -138,11 +139,12 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
 	entry: ["src/index.ts"],
-	format: ["esm", "cjs"],
+	format: ["esm", "cjs", "iife"],
 	dts: true,
 	clean: true,
 	target: "es2020",
 	sourcemap: true,
+	globalName: "UniversalLockMyBackend",
 	external: ["@universal-lock/types"],
 });
 ```

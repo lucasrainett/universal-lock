@@ -166,6 +166,10 @@ const myBackend: Backend = {
 };
 ```
 
+## Examples
+
+See the [`examples/`](https://github.com/lucasrainett/universal-lock/tree/master/examples) folder for ready-to-run TypeScript examples covering basic usage, decorators, lock loss detection, concurrency, Redis, and custom backends.
+
 ## License
 
 [MIT](https://github.com/lucasrainett/universal-lock/blob/master/LICENSE)
