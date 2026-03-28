@@ -21,6 +21,8 @@ npm install @universal-lock/local-storage # browser (cross-tab, older)
 
 ## Quick Start
 
+### ESM
+
 ```typescript
 import { lockFactory } from "universal-lock";
 import { createBackend } from "@universal-lock/memory";
@@ -33,6 +35,25 @@ try {
 } finally {
 	await release();
 }
+```
+
+### CommonJS
+
+```javascript
+const { lockFactory } = require("universal-lock");
+const { createBackend } = require("@universal-lock/memory");
+
+const lock = lockFactory(createBackend());
+```
+
+### Browser (IIFE)
+
+```html
+<script src="https://unpkg.com/@universal-lock/memory/dist/index.global.js"></script>
+<script src="https://unpkg.com/universal-lock/dist/index.global.js"></script>
+<script>
+	const lock = UniversalLock.lockFactory(UniversalLockMemory.createBackend());
+</script>
 ```
 
 ## API

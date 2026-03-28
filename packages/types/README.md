@@ -15,12 +15,25 @@ npm install @universal-lock/types
 ### Backend
 
 ```typescript
+type BackendSetupFunction = () => Promise<void>;
+type BackendAcquireFunction = (lockName: string, stale: number, lockId: string) => Promise<void>;
+type BackendRenewFunction = (lockName: string, lockId: string) => Promise<void>;
+type BackendReleaseFunction = (lockName: string, lockId: string) => Promise<void>;
+
 type Backend = {
-	setup: () => Promise<void>;
-	acquire: (lockName: string, stale: number, lockId: string) => Promise<void>;
-	renew: (lockName: string, lockId: string) => Promise<void>;
-	release: (lockName: string, lockId: string) => Promise<void>;
+	setup: BackendSetupFunction;
+	acquire: BackendAcquireFunction;
+	renew: BackendRenewFunction;
+	release: BackendReleaseFunction;
 };
+
+type BackendFactory = (...args: any[]) => Backend;
+```
+
+### Utility
+
+```typescript
+type AsyncFunction<R = unknown, P extends unknown[] = unknown[]> = (...args: P) => Promise<R>;
 ```
 
 ### Lock

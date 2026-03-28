@@ -10,6 +10,8 @@ npm install universal-lock @universal-lock/web-locks
 
 ## Usage
 
+### ESM
+
 ```typescript
 import { lockFactory } from "universal-lock";
 import { createBackend } from "@universal-lock/web-locks";
@@ -22,6 +24,25 @@ try {
 } finally {
 	await release();
 }
+```
+
+### CommonJS
+
+```javascript
+const { lockFactory } = require("universal-lock");
+const { createBackend } = require("@universal-lock/web-locks");
+
+const lock = lockFactory(createBackend());
+```
+
+### Browser (IIFE)
+
+```html
+<script src="https://unpkg.com/@universal-lock/web-locks/dist/index.global.js"></script>
+<script src="https://unpkg.com/universal-lock/dist/index.global.js"></script>
+<script>
+	const lock = UniversalLock.lockFactory(UniversalLockWebLocks.createBackend());
+</script>
 ```
 
 ## API

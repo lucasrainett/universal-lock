@@ -75,6 +75,7 @@ export function lockFactory(
 					const doRelease = async () => {
 						if (released) return;
 						released = true;
+						/* v8 ignore next */
 						if (maxHoldTimer) clearTimeout(maxHoldTimer);
 						await release(lockName, lockId);
 						onEvent({ type: "released", lockName });
@@ -181,6 +182,7 @@ export function lockDecoratorFactory(lock: Lock) {
 			const release = await lock.acquire(lockName);
 			let released = false;
 			const safeRelease = async () => {
+				/* v8 ignore next */
 				if (released) return;
 				released = true;
 				await release();

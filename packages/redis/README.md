@@ -12,7 +12,7 @@ You also need a Redis client library such as [ioredis](https://www.npmjs.com/pac
 
 ## Usage
 
-### With ioredis
+### ESM with ioredis
 
 ```typescript
 import { lockFactory } from "universal-lock";
@@ -34,7 +34,7 @@ try {
 }
 ```
 
-### With node-redis
+### ESM with node-redis
 
 ```typescript
 import { lockFactory } from "universal-lock";
@@ -48,6 +48,32 @@ const redisClient = {
 };
 
 const lock = lockFactory(createBackend(redisClient));
+```
+
+### CommonJS
+
+```javascript
+const { lockFactory } = require("universal-lock");
+const { createBackend } = require("@universal-lock/redis");
+const Redis = require("ioredis");
+
+const client = new Redis();
+const redisClient = {
+	eval: (script, keys, args) => client.eval(script, keys.length, ...keys, ...args),
+};
+
+const lock = lockFactory(createBackend(redisClient));
+```
+
+### Browser (IIFE)
+
+```html
+<script src="https://unpkg.com/@universal-lock/redis/dist/index.global.js"></script>
+<script src="https://unpkg.com/universal-lock/dist/index.global.js"></script>
+<script>
+	const backend = UniversalLockRedis.createBackend(redisClient);
+	const lock = UniversalLock.lockFactory(backend);
+</script>
 ```
 
 ## API

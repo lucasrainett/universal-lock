@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `LockEvent` discriminated union type
 - Renewal error handling — renew failures now trigger lock loss notification and auto-release
 - Running timeout notification — `onLockLost` and `AbortSignal` fire before auto-release
-- `lockDecoratorFactory` passes `AbortSignal` as first argument to wrapped functions
+- `lockDecoratorFactory` optionally passes `AbortSignal` as first argument to wrapped functions (opt-in via `{ signal: true }`)
 - `@universal-lock/redis` package — Redis backend for distributed cross-process/server locking via atomic Lua scripts
 - LocalStorage CAS verification — re-reads after write to detect concurrent overwrites
 - Integration tests combining core + memory backend
